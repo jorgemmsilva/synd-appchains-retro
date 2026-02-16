@@ -159,12 +159,14 @@ Maintenance and on-call has been extremely lightweight with no catastrophic issu
 The only consistent sources of alerts are source chain RPC increased latency and gas spikes, which usually last only a few minutes and resolve on their own.
 
 
-# Bonus Technical Solution
+# (Bonus) Technical Solution for Gas Tracking and Staking Rewards
 
- <!-- talk about gas tracking, multi chain trustless proofs  -->
+Problem statement:
+- Users stake (vote) on appchain usage. This means they direct a larger portion of the Emission rewards to their chosen appchain and they will also be entitled to a portion of rewards, given the Gas usage of their chosen appchain on the Syndicate Network.
+- Gas Usage for each appchain is tracked on their respective Sequencing Contract (which Lives on the Syndicate Network chain)
+- Staking data and emissions rewards live on the Commons chain (purpose-built appchain on Syndicate for staking)
+- Staking rewards and gas usage are calculated over epochs (roughly 1 month)
 
+How can we trustlessly relay the Gas usage information for all appchains from the Sequencing chain to the Staking Appchain?
 
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-TODO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+![](./assets/synd_gas_tracking.svg)
