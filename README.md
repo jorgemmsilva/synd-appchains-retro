@@ -30,11 +30,11 @@ In "normal" rollups the calldata for rollup transactions is posted to the Parent
 - the calldata raw bytes are written to the blockchain
 - a cryptographic commitment to the contents of the transaction (or batch of transactions) is posted on the parent chain while the actual raw bytes are stored and made available elsewhere (this is usually referred as an alt-da source).
 
-In Syndicate rollups, because we want the sequencer design to be more flexible (other models are possible, rather than "a single party controls the sequencing rights"). A smart contract on the Syndicate chain (which is itself a rollup) has business logic to decide who can submit ("sequence") txs to the Appchain's sequencing contract, which will act as the source for the Appchain's Txs calldata.
+Syndicate rollups replace the single-sequencer model with a more flexible design. A smart contract on the Syndicate chain (itself a rollup) defines business logic that determines who can submit ("sequence") transactions to a given Appchain. This sequencing contract becomes the canonical source for the Appchain's transaction calldata.
 
 ![](./assets/synd_rollups.svg)
 
-For this novel Sequencing mechanism to work we needed to build a custom on/offchain architecture that could support the Derivation being split - the Txs Calldata and Bridge Messages instead of originating from a single chain, they now have two separate sources:
+In a standard rollup, derivation reads all inputs — transaction calldata and bridge messages — from a single parent chain. Syndicate's sequencing model breaks this assumption: transaction calldata lives on the Sequencing chain, while bridge messages remain on the Settlement chain. Supporting this **split derivation** required a custom on/offchain architecture aware of both sources:
 
 - Settlement chain - The canonical Parent chain where the Bridge contracts will live and messages will be exchanged with the Rollup
 - Sequencing chain - The Syndicate Network chain where the Txs calldata will be available.
@@ -49,7 +49,7 @@ Bring Syndicate Appchains to life. Allow custom sequencing logic to become a rea
 
 - Low maintenance burden (minimal custom ops tooling, self-healing where possible)
 - Developer ergonomics (onboarding time, deploy frequency)
-- Optimize for strong write consistency, high availability for reads. (meaning txs should never get lost and reads should always be served even if the appchain is not fully caught up with derivation)
+- Writes must be durable and strongly consistent — no submitted transaction should ever be silently dropped. Reads should be highly available, serving the latest derived state even if derivation is temporarily behind the chain tip (i.e., reads may be stale but never unavailable).
 
 ## System Architecture
 
@@ -119,14 +119,10 @@ This is how the Withdrawals system works:
 ## Lessons & What I'd Do Differently
 
 - merge mchain + translator - this is probably the main thing I would change in the current architecture. These components were designed with a clear logic separation. Translator handles the slotting + "block building" logic, while mchain stores all the blockchain data and exposes a JSON-RPC for nitro to read from. In practice, we could have developed these modules as distinct logical units but made them 1 single piece of the network topology. This would have simplified the infrastructure setup, eliminate a bunch of code/network calls between these two services, and overall reduce the cognitive load of thinking about the system which is a burden for maintainers.
-
-- Config Manager - There was an attempt to create a "1 line config" for appchains, where there was a main registry per settlement chain and all node operators would have to do would be to have RPC connections to each source chain, know the appchain chainID and everything works. In practice this worked, but it got messy and hard to update because settlement chains could be different per appchains and we designed the configs to be non-upgradable and immutable. There were plans for an overhauled V2 where the registry would be centralized on Ethereum and config values were more flexible. Next time I'd design on-chain configuration to be maleable and with a single registry location.
-
+- Config Manager - There was an attempt to create a "1 line config" for appchains, where there was a main registry per settlement chain and all node operators would have to do would be to have RPC connections to each source chain, know the appchain chainID and everything works. In practice this worked, but it got messy and hard to update because settlement chains could be different per appchains and we designed the configs to be non-upgradable and immutable. There were plans for an overhauled V2 where the registry would be centralized on Ethereum and config values were more flexible. Next time I'd design on-chain configuration to be malleable and with a single registry location.
 - When thinking back on the Staking contracts, synd sequencing factory, etc. These contracts were developed and deployed as immutable - set in stone to adhere to the Ethereum mantra of "code is law" and give an extra layer of trust "we can't change the rules". Looking back I consider this was a mistake and it would have made our lives easier to go with industry-standard upgrade patterns. While the simplicity of immutable contracts is good in theory, in the real world it is very normal that we don't know the full picture when deploying the first version, there's lessons we learn along the way and improvements that only show themselves later.
-
 - Universal relay per chain would allow more fine grained control over Observability. While developing the Universal Relay the way we did, with Cloudflare workers, was pretty successful and low maintenance, when investigation was necessary, it was slightly worse to have the invocations for ALL appchains on a single deployment. There's also the noisy-neighbor problem where traffic spikes on one appchain would affect all the others and users that would get rate-limited for an appchain, would get rate-limited for all of them. I think the current setup served us pretty well for now but would likely not scale effectively with the amount of appchains.
-
-- We had alerts way too noisy initially. While at face value it seems good to be informed, this trains engineers that get pinged at each network fluctuation to ignore notifications "when everything is important, nothing is". We ended up toning down alerts and I'm pretty happy with the balance we managed to strike. Next time, I'd start with lots ot warnings that could be toned of or escalated, instead of triggering excess incidents.
+- We had alerts way too noisy initially. While at face value it seems good to be informed, this trains engineers that get pinged at each network fluctuation to ignore notifications "when everything is important, nothing is". We ended up toning down alerts and I'm pretty happy with the balance we managed to strike. Next time, I'd start with lots of slack warnings that could be toned down or escalated, instead of creating excess "emergency incidents".
 
 
 ## Results & Impact
@@ -158,8 +154,8 @@ AVG response time for `eth_` methods:
 
 The perceived latency is very acceptable and provides a high quality, consistent user experience.
 
-Uptime is 99% but there is no hard metric to back this up.
-Maintenance and on-call has been extremely lightweight with no catastrophic issues and no extended periods of downtime.
+We observed no extended outages during the Syndicate Appchains lifetime. Formal uptime tracking was not instrumented — a gap worth closing. Based on incident logs and alert history, we estimate effective availability above 99%.
+Maintenance and on-call has been extremely lightweight with no catastrophic issues and no prolonged periods of downtime.
 The only consistent sources of alerts are source chain RPC increased latency and gas spikes, which usually last only a few minutes and resolve on their own.
 
 
